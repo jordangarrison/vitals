@@ -24,9 +24,10 @@ export default new Elysia().get("/:username/workouts", ({ params }) => {
       total_distance_km: number;
       total_energy_kcal: number;
       source_name: string;
+      has_route: number;
     }>(
       `SELECT id, activity_type, start_date, duration_minutes,
-              total_distance_km, total_energy_kcal, source_name
+              total_distance_km, total_energy_kcal, source_name, has_route
        FROM workouts
        WHERE user_id = ?
        ORDER BY start_date DESC
@@ -114,6 +115,7 @@ export default new Elysia().get("/:username/workouts", ({ params }) => {
                 <th>Duration</th>
                 <th>Distance</th>
                 <th>Calories</th>
+                <th></th>
               </tr>
             </thead>
             <tbody>
@@ -139,6 +141,9 @@ export default new Elysia().get("/:username/workouts", ({ params }) => {
                   </td>
                   <td>
                     ${workout.total_energy_kcal ? `${Math.round(workout.total_energy_kcal)} kcal` : "—"}
+                  </td>
+                  <td>
+                    ${workout.has_route ? `<a href="/${username}/workouts/${workout.id}/route" class="btn btn-primary" style="padding: 0.25rem 0.5rem; font-size: 0.75rem;">View Route</a>` : ""}
                   </td>
                 </tr>
               `

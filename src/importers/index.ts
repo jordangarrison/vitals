@@ -1,6 +1,9 @@
 import { getOrCreateUser, recordImport } from "../db/queries";
 import { importAppleHealth } from "./apple-health";
 import { importMacroFactor } from "./macrofactor";
+import { importClinicalRecords } from "./clinical-records";
+import { importECGRecordings } from "./ecg";
+import { importWorkoutRoutes } from "./workout-routes";
 import { logger } from "../utils/logger";
 import type { ImportResult } from "../types/health";
 
@@ -9,12 +12,23 @@ export interface ImportOptions {
   dataPath?: string;
   skipAppleHealth?: boolean;
   skipMacroFactor?: boolean;
+  skipClinicalRecords?: boolean;
+  skipECG?: boolean;
+  skipWorkoutRoutes?: boolean;
 }
 
 export async function importHealthData(
   options: ImportOptions
 ): Promise<ImportResult> {
-  const { username, dataPath, skipAppleHealth = false, skipMacroFactor = false } = options;
+  const {
+    username,
+    dataPath,
+    skipAppleHealth = false,
+    skipMacroFactor = false,
+    skipClinicalRecords = false,
+    skipECG = false,
+    skipWorkoutRoutes = false,
+  } = options;
 
   logger.info(`\n${"=".repeat(60)}`);
   logger.info(`  Vitals Health Data Import`);
@@ -89,6 +103,72 @@ export async function importHealthData(
           macroFactorResult.recordsImported,
           macroFactorResult.errors.length > 0 ? "failed" : "partial",
           macroFactorResult.errors.join("\n")
+        );
+      }
+    }
+
+    // Import Clinical Records (FHIR)
+    if (!skipClinicalRecords) {
+      const clinicalResult = await importClinicalRecords({
+        userId: user.id,
+        username,
+        dataPath,
+      });
+
+      totalRecords += clinicalResult.recordsImported;
+      errors.push(...clinicalResult.errors);
+
+      if (clinicalResult.success) {
+        recordImport(
+          user.id,
+          "clinical-records",
+          "clinical-records/*.json",
+          clinicalResult.recordsImported,
+          "success"
+        );
+      }
+    }
+
+    // Import ECG Recordings
+    if (!skipECG) {
+      const ecgResult = await importECGRecordings({
+        userId: user.id,
+        username,
+        dataPath,
+      });
+
+      totalRecords += ecgResult.recordsImported;
+      errors.push(...ecgResult.errors);
+
+      if (ecgResult.success) {
+        recordImport(
+          user.id,
+          "ecg-recordings",
+          "electrocardiograms/*.csv",
+          ecgResult.recordsImported,
+          "success"
+        );
+      }
+    }
+
+    // Import Workout Routes (GPX)
+    if (!skipWorkoutRoutes) {
+      const routesResult = await importWorkoutRoutes({
+        userId: user.id,
+        username,
+        dataPath,
+      });
+
+      totalRecords += routesResult.recordsImported;
+      errors.push(...routesResult.errors);
+
+      if (routesResult.success) {
+        recordImport(
+          user.id,
+          "workout-routes",
+          "workout-routes/*.gpx",
+          routesResult.recordsImported,
+          "success"
         );
       }
     }

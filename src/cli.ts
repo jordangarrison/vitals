@@ -21,6 +21,9 @@ async function runImport() {
   let username = "jordan"; // Default username
   let skipAppleHealth = false;
   let skipMacroFactor = false;
+  let skipClinicalRecords = false;
+  let skipECG = false;
+  let skipWorkoutRoutes = false;
 
   for (let i = 1; i < args.length; i++) {
     const arg = args[i];
@@ -31,6 +34,12 @@ async function runImport() {
       skipAppleHealth = true;
     } else if (arg === "--skip-macrofactor") {
       skipMacroFactor = true;
+    } else if (arg === "--skip-clinical-records") {
+      skipClinicalRecords = true;
+    } else if (arg === "--skip-ecg") {
+      skipECG = true;
+    } else if (arg === "--skip-workout-routes") {
+      skipWorkoutRoutes = true;
     } else if (arg === "--help" || arg === "-h") {
       showImportHelp();
       process.exit(0);
@@ -48,6 +57,9 @@ async function runImport() {
       username,
       skipAppleHealth,
       skipMacroFactor,
+      skipClinicalRecords,
+      skipECG,
+      skipWorkoutRoutes,
     });
 
     closeDatabase();
@@ -90,6 +102,9 @@ Options:
   --user, -u <username>        Username to import data for (default: jordan)
   --skip-apple-health          Skip Apple Health import
   --skip-macrofactor           Skip MacroFactor import
+  --skip-clinical-records      Skip FHIR clinical records import
+  --skip-ecg                   Skip ECG recordings import
+  --skip-workout-routes        Skip GPX workout routes import
   --help, -h                   Show this help message
 
 Examples:
@@ -102,11 +117,17 @@ Examples:
   # Import only MacroFactor data
   bun run import --user jordan --skip-apple-health
 
+  # Import only Phase 4 data (clinical, ECG, routes)
+  bun run import --user jordan --skip-apple-health --skip-macrofactor
+
 Data Structure:
   health-data/
   └── {username}/
       ├── apple-health/
-      │   └── export.xml
+      │   ├── export.xml
+      │   ├── clinical-records/*.json
+      │   ├── electrocardiograms/*.csv
+      │   └── workout-routes/*.gpx
       └── macrofactor/
           └── MacroFactor-*.xlsx
 `);

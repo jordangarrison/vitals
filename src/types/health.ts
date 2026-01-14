@@ -225,3 +225,51 @@ export interface MacroFactorBodyMetricsRow {
   date: string;
   [key: string]: any; // Dynamic body measurement columns
 }
+
+/**
+ * Clinical Records (FHIR)
+ */
+export interface ClinicalRecord {
+  id?: number;
+  user_id: number;
+  resource_type: string;
+  resource_id: string;
+  recorded_date?: string;
+  display_name?: string;
+  code?: string;
+  code_system?: string;
+  value_text?: string;
+  value_quantity?: number;
+  value_unit?: string;
+  file_path: string;
+  raw_json?: string;
+  metadata?: string;
+}
+
+/**
+ * ECG Recordings
+ */
+export interface ECGRecording {
+  id?: number;
+  user_id: number;
+  recorded_date: string;
+  classification?: string;
+  symptoms?: string;
+  average_heart_rate?: number;
+  software_version?: string;
+  device?: string;
+  sample_rate_hz: number;
+  file_path: string;
+  waveform_json?: string;
+}
+
+/**
+ * Workout Route
+ */
+export interface WorkoutRoute {
+  id?: number;
+  workout_id: number;
+  file_path: string;
+  start_date?: string;
+  end_date?: string;
+}
