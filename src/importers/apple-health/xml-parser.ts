@@ -24,6 +24,7 @@ interface ParseStats {
   recordsProcessed: number;
   workoutsProcessed: number;
   activitiesProcessed: number;
+  sleepSessionsProcessed: number;
   errors: string[];
 }
 
@@ -39,6 +40,7 @@ export async function parseAppleHealthXML(
       recordsProcessed: 0,
       workoutsProcessed: 0,
       activitiesProcessed: 0,
+      sleepSessionsProcessed: 0,
       errors: [],
     };
 
@@ -85,6 +87,51 @@ export async function parseAppleHealthXML(
         fitzpatrick_skin_type = excluded.fitzpatrick_skin_type,
         cardio_fitness_medications_use = excluded.cardio_fitness_medications_use
     `);
+
+    const insertSleep = db.prepare(`
+      INSERT INTO sleep_sessions (
+        user_id, start_date, end_date, duration_hours, sleep_type,
+        source_name, metadata
+      ) VALUES (?, ?, ?, ?, ?, ?, ?)
+    `);
+
+    let sleepBatch: Array<{
+      user_id: number;
+      start_date: string;
+      end_date: string;
+      duration_hours: number;
+      sleep_type: string;
+      source_name: string;
+      metadata?: string;
+    }> = [];
+
+    function flushSleepBatch() {
+      if (sleepBatch.length === 0) return;
+
+      try {
+        db.run("BEGIN TRANSACTION");
+
+        for (const sleep of sleepBatch) {
+          insertSleep.run(
+            sleep.user_id,
+            sleep.start_date,
+            sleep.end_date,
+            sleep.duration_hours,
+            sleep.sleep_type,
+            sleep.source_name,
+            sleep.metadata || null
+          );
+        }
+
+        db.run("COMMIT");
+        stats.sleepSessionsProcessed = (stats.sleepSessionsProcessed || 0) + sleepBatch.length;
+      } catch (error) {
+        db.run("ROLLBACK");
+        stats.errors.push(`Sleep batch insert failed: ${error}`);
+      }
+
+      sleepBatch = [];
+    }
 
     function flushRecordBatch() {
       if (recordBatch.length === 0) return;
@@ -161,7 +208,42 @@ export async function parseAppleHealthXML(
           // Parse health metric record
           const attrs = node.attributes;
 
-          if (!attrs.type || !attrs.value) return;
+          if (!attrs.type) return;
+
+          // Handle sleep analysis records (categorical, not numeric)
+          if (attrs.type === "HKCategoryTypeIdentifierSleepAnalysis") {
+            if (!attrs.startDate || !attrs.endDate) return;
+
+            const startDate = parseAppleHealthDate(attrs.startDate);
+            const endDate = parseAppleHealthDate(attrs.endDate);
+
+            // Calculate duration in hours
+            const startTime = new Date(startDate).getTime();
+            const endTime = new Date(endDate).getTime();
+            const durationHours = (endTime - startTime) / (1000 * 60 * 60);
+
+            // Extract sleep type from value (e.g., "HKCategoryValueSleepAnalysisInBed" -> "InBed")
+            const sleepType = attrs.value
+              ? attrs.value.replace("HKCategoryValueSleepAnalysis", "")
+              : "Unknown";
+
+            sleepBatch.push({
+              user_id: userId,
+              start_date: startDate,
+              end_date: endDate,
+              duration_hours: durationHours,
+              sleep_type: sleepType,
+              source_name: attrs.sourceName || "Unknown",
+            });
+
+            if (sleepBatch.length >= BATCH_SIZE) {
+              flushSleepBatch();
+            }
+            return;
+          }
+
+          // For numeric records, require a value
+          if (!attrs.value) return;
 
           const metricType = normalizeMetricType(attrs.type);
           let value = parseFloat(attrs.value);
@@ -373,10 +455,11 @@ export async function parseAppleHealthXML(
       // Flush remaining batches
       flushRecordBatch();
       flushWorkoutBatch();
+      flushSleepBatch();
 
-      logger.endPhase(stats.recordsProcessed + stats.workoutsProcessed);
+      logger.endPhase(stats.recordsProcessed + stats.workoutsProcessed + stats.sleepSessionsProcessed);
       logger.info(
-        `  Records: ${stats.recordsProcessed.toLocaleString()}, Workouts: ${stats.workoutsProcessed.toLocaleString()}, Activities: ${stats.activitiesProcessed.toLocaleString()}`
+        `  Records: ${stats.recordsProcessed.toLocaleString()}, Workouts: ${stats.workoutsProcessed.toLocaleString()}, Activities: ${stats.activitiesProcessed.toLocaleString()}, Sleep: ${stats.sleepSessionsProcessed.toLocaleString()}`
       );
 
       if (stats.errors.length > 0) {

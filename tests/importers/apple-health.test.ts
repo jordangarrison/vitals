@@ -47,6 +47,14 @@ const SAMPLE_XML = `<?xml version="1.0" encoding="UTF-8"?>
                    activeEnergyBurned="500" activeEnergyBurnedGoal="600"
                    appleExerciseTime="30" appleExerciseTimeGoal="30"
                    appleStandHours="10" appleStandHoursGoal="12"/>
+  <Record type="HKCategoryTypeIdentifierSleepAnalysis" sourceName="Clock"
+          creationDate="2024-01-01 07:00:00 -0600"
+          startDate="2024-01-01 00:00:00 -0600"
+          endDate="2024-01-01 07:00:00 -0600" value="HKCategoryValueSleepAnalysisInBed"/>
+  <Record type="HKCategoryTypeIdentifierSleepAnalysis" sourceName="Apple Watch"
+          creationDate="2024-01-01 07:00:00 -0600"
+          startDate="2024-01-01 01:00:00 -0600"
+          endDate="2024-01-01 06:30:00 -0600" value="HKCategoryValueSleepAnalysisAsleepCore"/>
 </HealthData>`;
 
 describe("Apple Health importer", () => {
@@ -89,6 +97,7 @@ describe("Apple Health importer", () => {
     expect(stats.recordsProcessed).toBe(4); // 2 steps + 1 heart rate + 1 weight
     expect(stats.workoutsProcessed).toBe(1);
     expect(stats.activitiesProcessed).toBe(1);
+    expect(stats.sleepSessionsProcessed).toBe(2); // 2 sleep records
     expect(stats.errors.length).toBe(0);
   });
 
@@ -188,5 +197,36 @@ describe("Apple Health importer", () => {
     expect(profile.date_of_birth).toBe("1990-01-01");
     expect(profile.biological_sex).toBe("Male");
     expect(profile.blood_type).toBe("OPositive");
+  });
+
+  test("imports sleep sessions correctly", async () => {
+    await parseAppleHealthXML(userId, TEST_XML_PATH);
+
+    const db = getDatabase();
+
+    const sleepSessions = db.query(`
+      SELECT start_date, end_date, duration_hours, sleep_type, source_name
+      FROM sleep_sessions
+      WHERE user_id = ?
+      ORDER BY start_date
+    `).all(userId) as Array<{
+      start_date: string;
+      end_date: string;
+      duration_hours: number;
+      sleep_type: string;
+      source_name: string;
+    }>;
+
+    expect(sleepSessions.length).toBe(2);
+
+    // First sleep record: InBed from Clock (7 hours)
+    expect(sleepSessions[0].sleep_type).toBe("InBed");
+    expect(sleepSessions[0].source_name).toBe("Clock");
+    expect(sleepSessions[0].duration_hours).toBeCloseTo(7, 0);
+
+    // Second sleep record: AsleepCore from Apple Watch (5.5 hours)
+    expect(sleepSessions[1].sleep_type).toBe("AsleepCore");
+    expect(sleepSessions[1].source_name).toBe("Apple Watch");
+    expect(sleepSessions[1].duration_hours).toBeCloseTo(5.5, 0);
   });
 });
