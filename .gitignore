@@ -1,0 +1,38 @@
+# Dependencies
+node_modules/
+bun.lockb
+
+# Database
+data/vitals.db
+data/vitals.db-shm
+data/vitals.db-wal
+data/*.backup
+data/test-*.db
+data/test-*.db-shm
+data/test-*.db-wal
+
+# Health Data (personal/sensitive)
+health-data/
+
+# Environment
+.env
+.env.local
+.direnv/
+
+# Build outputs
+dist/
+build/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*

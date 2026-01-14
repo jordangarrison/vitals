@@ -1,0 +1,28 @@
+{
+  "name": "vitals",
+  "version": "1.0.0",
+  "description": "Personal health data explorer",
+  "type": "module",
+  "scripts": {
+    "dev": "bun --watch src/index.ts",
+    "start": "bun src/index.ts",
+    "import": "bun run src/cli.ts import",
+    "db:init": "bun src/db/schema.ts",
+    "db:reset": "rm -f data/vitals.db && bun run db:init",
+    "test": "bun test"
+  },
+  "dependencies": {
+    "@elysiajs/html": "^1.4.0",
+    "@elysiajs/static": "^1.4.7",
+    "chart.js": "^4.4.7",
+    "elysia": "^1.4.21",
+    "exceljs": "^4.4.0",
+    "sax": "^1.4.1",
+    "xlsx": "^0.18.5"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "@types/sax": "^1.2.7",
+    "typescript": "^5.7.2"
+  }
+}
