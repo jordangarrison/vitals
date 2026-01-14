@@ -284,6 +284,7 @@ export function Layout(
               ? `
           <ul class="nav-links">
             <li><a href="${baseUrl}">Dashboard</a></li>
+            <li><a href="${baseUrl}/mental-health">Mental Health</a></li>
             <li><a href="${baseUrl}/metrics">Metrics</a></li>
             <li><a href="${baseUrl}/workouts">Workouts</a></li>
             <li><a href="${baseUrl}/nutrition">Nutrition</a></li>
@@ -564,6 +565,7 @@ export function LayoutWithMap(
               ? `
           <ul class="nav-links">
             <li><a href="${baseUrl}">Dashboard</a></li>
+            <li><a href="${baseUrl}/mental-health">Mental Health</a></li>
             <li><a href="${baseUrl}/metrics">Metrics</a></li>
             <li><a href="${baseUrl}/workouts">Workouts</a></li>
             <li><a href="${baseUrl}/nutrition">Nutrition</a></li>
