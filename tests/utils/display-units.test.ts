@@ -71,14 +71,14 @@ describe("Display Units", () => {
   });
 
   describe("formatDistance", () => {
-    test("formats distance in km by default", () => {
-      expect(formatDistance(10)).toBe("10.0 km");
-      expect(formatDistance(5.5)).toBe("5.5 km");
+    test("formats distance in miles by default (imperial)", () => {
+      expect(formatDistance(10)).toBe("6.2 mi");
+      expect(formatDistance(16.09)).toBe("10.0 mi");
     });
 
-    test("formats distance in miles when specified", () => {
-      expect(formatDistance(10, "miles")).toBe("6.2 mi");
-      expect(formatDistance(16.09, "miles")).toBe("10.0 mi");
+    test("formats distance in km when specified", () => {
+      expect(formatDistance(10, "km")).toBe("10.0 km");
+      expect(formatDistance(5.5, "km")).toBe("5.5 km");
     });
   });
 });

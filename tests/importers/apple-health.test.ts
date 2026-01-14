@@ -1,7 +1,7 @@
 import { describe, test, expect, beforeEach, afterEach } from "bun:test";
 import { Database } from "bun:sqlite";
-import { unlinkSync, existsSync, writeFileSync } from "fs";
-import { resolve } from "path";
+import { unlinkSync, existsSync, writeFileSync, mkdirSync } from "fs";
+import { resolve, dirname } from "path";
 import { initializeDatabase } from "../../src/db/schema";
 import { setDatabase, getDatabase } from "../../src/db/client";
 import { getOrCreateUser } from "../../src/db/queries";
@@ -9,6 +9,9 @@ import { parseAppleHealthXML } from "../../src/importers/apple-health/xml-parser
 
 const TEST_DB_PATH = resolve(import.meta.dir, "../../data/test-apple-health.db");
 const TEST_XML_PATH = resolve(import.meta.dir, "../fixtures/sample-export.xml");
+
+// Ensure fixtures directory exists
+mkdirSync(dirname(TEST_XML_PATH), { recursive: true });
 
 const SAMPLE_XML = `<?xml version="1.0" encoding="UTF-8"?>
 <HealthData locale="en_US">

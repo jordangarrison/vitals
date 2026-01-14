@@ -87,7 +87,7 @@ describe("Multi-user routing", () => {
       const response = await app.handle(new Request("http://localhost/jordan"));
       expect(response.status).toBe(200);
       const text = await response.text();
-      expect(text).toContain("Dashboard - jordan");
+      expect(text).toContain("Health Journey");
     });
 
     test("GET /:username/metrics returns metrics page", async () => {
