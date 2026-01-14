@@ -1,5 +1,6 @@
 import { Database } from "bun:sqlite";
-import { resolve } from "path";
+import { resolve, dirname } from "path";
+import { mkdirSync } from "fs";
 
 const DB_PATH =
   process.env.NODE_ENV === "test"
@@ -7,7 +8,12 @@ const DB_PATH =
     : resolve(import.meta.dir, "../../data/vitals.db");
 
 export function initializeDatabase(dbPath?: string): Database {
-  const db = new Database(dbPath || DB_PATH, { create: true });
+  const targetPath = dbPath || DB_PATH;
+
+  // Ensure data directory exists
+  mkdirSync(dirname(targetPath), { recursive: true });
+
+  const db = new Database(targetPath, { create: true });
 
   // Enable foreign keys and performance optimizations
   db.run("PRAGMA foreign_keys = ON");
