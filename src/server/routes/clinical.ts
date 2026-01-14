@@ -1,12 +1,83 @@
 import { Elysia } from "elysia";
 import { getDatabase } from "../../db/client";
 import { getAllUsers } from "../../db/queries";
-import { Layout } from "../views/layout";
+import { Layout, ErrorPage } from "../views/layout";
+
+const PAGE_SIZE = 50;
+
+function paginationControls(
+  basePath: string,
+  currentPage: number,
+  totalPages: number,
+  totalRecords: number,
+  filterType?: string
+): string {
+  if (totalPages <= 1) return "";
+
+  const pages: string[] = [];
+  const maxVisible = 5;
+  let start = Math.max(1, currentPage - Math.floor(maxVisible / 2));
+  let end = Math.min(totalPages, start + maxVisible - 1);
+
+  if (end - start < maxVisible - 1) {
+    start = Math.max(1, end - maxVisible + 1);
+  }
+
+  const typeParam = filterType ? `&type=${filterType}` : "";
+
+  if (currentPage > 1) {
+    pages.push(
+      `<a href="${basePath}?page=${currentPage - 1}${typeParam}" class="btn btn-secondary" style="padding: 0.25rem 0.5rem;">← Prev</a>`
+    );
+  }
+
+  if (start > 1) {
+    pages.push(
+      `<a href="${basePath}?page=1${typeParam}" class="btn btn-secondary" style="padding: 0.25rem 0.5rem;">1</a>`
+    );
+    if (start > 2) pages.push(`<span style="padding: 0 0.5rem;">...</span>`);
+  }
+
+  for (let i = start; i <= end; i++) {
+    if (i === currentPage) {
+      pages.push(
+        `<span class="btn btn-primary" style="padding: 0.25rem 0.5rem;">${i}</span>`
+      );
+    } else {
+      pages.push(
+        `<a href="${basePath}?page=${i}${typeParam}" class="btn btn-secondary" style="padding: 0.25rem 0.5rem;">${i}</a>`
+      );
+    }
+  }
+
+  if (end < totalPages) {
+    if (end < totalPages - 1) pages.push(`<span style="padding: 0 0.5rem;">...</span>`);
+    pages.push(
+      `<a href="${basePath}?page=${totalPages}${typeParam}" class="btn btn-secondary" style="padding: 0.25rem 0.5rem;">${totalPages}</a>`
+    );
+  }
+
+  if (currentPage < totalPages) {
+    pages.push(
+      `<a href="${basePath}?page=${currentPage + 1}${typeParam}" class="btn btn-secondary" style="padding: 0.25rem 0.5rem;">Next →</a>`
+    );
+  }
+
+  return `
+    <div style="display: flex; align-items: center; justify-content: center; gap: 0.5rem; margin-top: 1rem;">
+      ${pages.join("")}
+      <span class="text-muted text-sm" style="margin-left: 1rem;">
+        ${totalRecords.toLocaleString()} total
+      </span>
+    </div>
+  `;
+}
 
 export default new Elysia()
   .get("/:username/clinical", ({ params, query }) => {
     const username = params.username;
     const filterType = query.type as string | undefined;
+    const page = Math.max(1, parseInt((query.page as string) || "1", 10));
     const db = getDatabase();
     const users = getAllUsers();
     const user = users.find((u) => u.username === username);
@@ -26,7 +97,19 @@ export default new Elysia()
       )
       .all(user.id);
 
-    const totalRecords = typeCounts.reduce((sum, t) => sum + t.count, 0);
+    const totalAllRecords = typeCounts.reduce((sum, t) => sum + t.count, 0);
+
+    // Get count for current filter
+    let countQuery = `SELECT COUNT(*) as count FROM clinical_records WHERE user_id = ?`;
+    const countParams: any[] = [user.id];
+    if (filterType) {
+      countQuery += ` AND resource_type = ?`;
+      countParams.push(filterType);
+    }
+    const countResult = db.query<{ count: number }>(countQuery).get(...countParams);
+    const totalRecords = countResult?.count || 0;
+    const totalPages = Math.ceil(totalRecords / PAGE_SIZE);
+    const offset = (page - 1) * PAGE_SIZE;
 
     // Get records with optional type filter
     let recordsQuery = `
@@ -42,7 +125,8 @@ export default new Elysia()
       queryParams.push(filterType);
     }
 
-    recordsQuery += ` ORDER BY recorded_date DESC LIMIT 100`;
+    recordsQuery += ` ORDER BY recorded_date DESC LIMIT ? OFFSET ?`;
+    queryParams.push(PAGE_SIZE, offset);
 
     const records = db
       .query<{
@@ -66,7 +150,7 @@ export default new Elysia()
         <div class="card stat-card">
           <div class="stat-label">Total Records</div>
           <div class="stat-value" style="font-size: 2rem;">
-            ${totalRecords.toLocaleString()}
+            ${totalAllRecords.toLocaleString()}
           </div>
         </div>
 
@@ -84,7 +168,7 @@ export default new Elysia()
           <a href="/${username}/clinical"
              class="btn ${!filterType ? "btn-primary" : "btn-secondary"}"
              style="padding: 0.25rem 0.75rem; font-size: 0.875rem;">
-            All (${totalRecords})
+            All (${totalAllRecords})
           </a>
           ${typeCounts
             .map(
@@ -151,6 +235,7 @@ export default new Elysia()
               .join("")}
           </tbody>
         </table>
+        ${paginationControls(`/${username}/clinical`, page, totalPages, totalRecords, filterType)}
       </div>
     `;
 
@@ -187,12 +272,13 @@ export default new Elysia()
       .get(recordId, user.id);
 
     if (!record) {
-      const content = `
-        <h1>Record Not Found</h1>
-        <p class="text-muted">Clinical record #${recordId} not found.</p>
-        <a href="/${username}/clinical" class="btn btn-secondary">Back to Clinical Records</a>
-      `;
-      return Layout("Vitals - Record Not Found", content, username);
+      return ErrorPage(
+        "Record Not Found",
+        `Clinical record #${recordId} was not found or you don't have access to it.`,
+        `/${username}/clinical`,
+        "Back to Clinical Records",
+        username
+      );
     }
 
     // Format JSON for display

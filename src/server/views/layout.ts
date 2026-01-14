@@ -223,6 +223,55 @@ export function Layout(
         font-size: 1.25rem;
         margin-bottom: 0.75rem;
       }
+
+      .error-page {
+        text-align: center;
+        padding: 4rem 2rem;
+      }
+
+      .error-icon {
+        font-size: 4rem;
+        margin-bottom: 1rem;
+        opacity: 0.5;
+      }
+
+      .error-title {
+        font-size: 1.5rem;
+        color: var(--gray-700);
+        margin-bottom: 0.5rem;
+      }
+
+      .error-message {
+        color: var(--gray-500);
+        margin-bottom: 1.5rem;
+        max-width: 400px;
+        margin-left: auto;
+        margin-right: auto;
+      }
+
+      .alert {
+        padding: 1rem;
+        border-radius: 6px;
+        margin-bottom: 1rem;
+      }
+
+      .alert-error {
+        background: #fef2f2;
+        border: 1px solid #fecaca;
+        color: #991b1b;
+      }
+
+      .alert-warning {
+        background: #fffbeb;
+        border: 1px solid #fde68a;
+        color: #92400e;
+      }
+
+      .alert-success {
+        background: #f0fdf4;
+        border: 1px solid #bbf7d0;
+        color: #166534;
+      }
     </style>
   </head>
   <body>
@@ -255,6 +304,24 @@ export function Layout(
     <main class="container">${content}</main>
   </body>
 </html>`;
+}
+
+export function ErrorPage(
+  title: string,
+  message: string,
+  backUrl: string,
+  backLabel: string = "Go Back",
+  username?: string
+): string {
+  const content = `
+    <div class="error-page">
+      <div class="error-icon">&#x26A0;</div>
+      <h1 class="error-title">${title}</h1>
+      <p class="error-message">${message}</p>
+      <a href="${backUrl}" class="btn btn-primary">${backLabel}</a>
+    </div>
+  `;
+  return Layout(`Vitals - ${title}`, content, username);
 }
 
 export function LayoutWithMap(

@@ -4,7 +4,7 @@ import sax from "sax";
 import { createReadStream } from "fs";
 import { getDatabase } from "../../db/client";
 import { getAllUsers } from "../../db/queries";
-import { LayoutWithMap } from "../views/layout";
+import { LayoutWithMap, ErrorPage } from "../views/layout";
 
 interface TrackPoint {
   lat: number;
@@ -189,12 +189,13 @@ export default new Elysia()
       .get(workoutId, user.id);
 
     if (!workout) {
-      const content = `
-        <h1>Workout Not Found</h1>
-        <p class="text-muted">Workout #${workoutId} not found.</p>
-        <a href="/${username}/workouts" class="btn btn-secondary">Back to Workouts</a>
-      `;
-      return LayoutWithMap("Vitals - Workout Not Found", content, username);
+      return ErrorPage(
+        "Workout Not Found",
+        `Workout #${workoutId} was not found or you don't have access to it.`,
+        `/${username}/workouts`,
+        "Back to Workouts",
+        username
+      );
     }
 
     const route = db
@@ -204,12 +205,13 @@ export default new Elysia()
       .get(workoutId);
 
     if (!route) {
-      const content = `
-        <h1>Route Not Found</h1>
-        <p class="text-muted">No route data available for this workout.</p>
-        <a href="/${username}/workouts" class="btn btn-secondary">Back to Workouts</a>
-      `;
-      return LayoutWithMap("Vitals - Route Not Found", content, username);
+      return ErrorPage(
+        "Route Not Found",
+        "No GPS route data is available for this workout.",
+        `/${username}/workouts`,
+        "Back to Workouts",
+        username
+      );
     }
 
     // Parse GPX file for display
@@ -217,12 +219,13 @@ export default new Elysia()
     try {
       trackPoints = await parseGPXForDisplay(route.file_path);
     } catch (error) {
-      const content = `
-        <h1>Error Loading Route</h1>
-        <p class="text-muted">Failed to load route data: ${error}</p>
-        <a href="/${username}/workouts" class="btn btn-secondary">Back to Workouts</a>
-      `;
-      return LayoutWithMap("Vitals - Route Error", content, username);
+      return ErrorPage(
+        "Error Loading Route",
+        `Failed to load route data. The GPX file may be corrupted or inaccessible.`,
+        `/${username}/workouts`,
+        "Back to Workouts",
+        username
+      );
     }
 
     // Decimate points for performance (every 5th point for routes with many points)

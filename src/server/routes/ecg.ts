@@ -1,7 +1,7 @@
 import { Elysia } from "elysia";
 import { getDatabase } from "../../db/client";
 import { getAllUsers } from "../../db/queries";
-import { Layout } from "../views/layout";
+import { Layout, ErrorPage } from "../views/layout";
 
 export default new Elysia()
   .get("/:username/ecg", ({ params }) => {
@@ -139,12 +139,13 @@ export default new Elysia()
       .get(ecgId, user.id);
 
     if (!ecg) {
-      const content = `
-        <h1>ECG Not Found</h1>
-        <p class="text-muted">ECG recording #${ecgId} not found.</p>
-        <a href="/${username}/ecg" class="btn btn-secondary">Back to ECG Recordings</a>
-      `;
-      return Layout("Vitals - ECG Not Found", content, username);
+      return ErrorPage(
+        "ECG Not Found",
+        `ECG recording #${ecgId} was not found or you don't have access to it.`,
+        `/${username}/ecg`,
+        "Back to ECG Recordings",
+        username
+      );
     }
 
     const dateStr = new Date(ecg.recorded_date).toLocaleString();
@@ -223,16 +224,18 @@ export default new Elysia()
 
       <script>
         const ctx = document.getElementById('ecgChart').getContext('2d');
-        const waveformData = ${JSON.stringify(waveformData)};
+        const rawWaveform = ${JSON.stringify(waveformData)};
         const sampleRate = ${actualSampleRate};
 
-        // Generate time labels in milliseconds
-        const timeLabels = waveformData.map((_, i) => (i / sampleRate * 1000).toFixed(0));
+        // Convert to {x, y} format for decimation plugin
+        const waveformData = rawWaveform.map((v, i) => ({
+          x: i / sampleRate * 1000,
+          y: v
+        }));
 
         new Chart(ctx, {
           type: 'line',
           data: {
-            labels: timeLabels,
             datasets: [{
               label: 'ECG (µV)',
               data: waveformData,
@@ -246,19 +249,26 @@ export default new Elysia()
             responsive: true,
             maintainAspectRatio: false,
             animation: false,
+            parsing: false,
             plugins: {
               legend: {
                 display: false
               },
+              decimation: {
+                enabled: waveformData.length > 500,
+                algorithm: 'lttb',
+                samples: 500
+              },
               tooltip: {
                 callbacks: {
-                  title: (items) => items[0].label + ' ms',
-                  label: (item) => item.raw.toFixed(1) + ' µV'
+                  title: (items) => items[0].raw.x.toFixed(0) + ' ms',
+                  label: (item) => item.raw.y.toFixed(1) + ' µV'
                 }
               }
             },
             scales: {
               x: {
+                type: 'linear',
                 title: {
                   display: true,
                   text: 'Time (ms)'

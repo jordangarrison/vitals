@@ -270,18 +270,31 @@ export default new Elysia()
               data: chartData.map(d => d.value),
               borderColor: 'rgb(59, 130, 246)',
               backgroundColor: 'rgba(59, 130, 246, 0.1)',
-              tension: 0.1
+              tension: 0.1,
+              pointRadius: chartData.length > 50 ? 0 : 3,
+              borderWidth: chartData.length > 50 ? 1 : 2
             }]
           },
           options: {
             responsive: true,
             maintainAspectRatio: false,
+            animation: chartData.length > 100 ? false : { duration: 400 },
             plugins: {
               legend: {
                 display: false
+              },
+              decimation: {
+                enabled: chartData.length > 100,
+                algorithm: 'lttb',
+                samples: 100
               }
             },
             scales: {
+              x: {
+                ticks: {
+                  maxTicksLimit: 10
+                }
+              },
               y: {
                 beginAtZero: false
               }

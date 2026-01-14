@@ -1,39 +1,122 @@
-import { Elysia } from "elysia";
+import { Elysia, t } from "elysia";
 import { getDatabase } from "../../db/client";
 import { getAllUsers } from "../../db/queries";
 import { Layout } from "../views/layout";
 import { formatDistance } from "../../utils/display-units";
 
-export default new Elysia().get("/:username/workouts", ({ params }) => {
-  const username = params.username;
-  const db = getDatabase();
-  const users = getAllUsers();
-  const user = users.find((u) => u.username === username);
+const PAGE_SIZE = 50;
 
-  if (!user) {
-    return Response.redirect("/");
+function paginationControls(
+  basePath: string,
+  currentPage: number,
+  totalPages: number,
+  totalRecords: number
+): string {
+  if (totalPages <= 1) return "";
+
+  const pages: string[] = [];
+  const maxVisible = 5;
+  let start = Math.max(1, currentPage - Math.floor(maxVisible / 2));
+  let end = Math.min(totalPages, start + maxVisible - 1);
+
+  if (end - start < maxVisible - 1) {
+    start = Math.max(1, end - maxVisible + 1);
   }
 
-  // Get all workouts
-  const workouts = db
-    .query<{
-      id: number;
-      activity_type: string;
-      start_date: string;
-      duration_minutes: number;
-      total_distance_km: number;
-      total_energy_kcal: number;
-      source_name: string;
-      has_route: number;
-    }>(
-      `SELECT id, activity_type, start_date, duration_minutes,
-              total_distance_km, total_energy_kcal, source_name, has_route
-       FROM workouts
-       WHERE user_id = ?
-       ORDER BY start_date DESC
-       LIMIT 100`
-    )
-    .all(user.id);
+  // Previous button
+  if (currentPage > 1) {
+    pages.push(
+      `<a href="${basePath}?page=${currentPage - 1}" class="btn btn-secondary" style="padding: 0.25rem 0.5rem;">← Prev</a>`
+    );
+  }
+
+  // Page numbers
+  if (start > 1) {
+    pages.push(
+      `<a href="${basePath}?page=1" class="btn btn-secondary" style="padding: 0.25rem 0.5rem;">1</a>`
+    );
+    if (start > 2) pages.push(`<span style="padding: 0 0.5rem;">...</span>`);
+  }
+
+  for (let i = start; i <= end; i++) {
+    if (i === currentPage) {
+      pages.push(
+        `<span class="btn btn-primary" style="padding: 0.25rem 0.5rem;">${i}</span>`
+      );
+    } else {
+      pages.push(
+        `<a href="${basePath}?page=${i}" class="btn btn-secondary" style="padding: 0.25rem 0.5rem;">${i}</a>`
+      );
+    }
+  }
+
+  if (end < totalPages) {
+    if (end < totalPages - 1) pages.push(`<span style="padding: 0 0.5rem;">...</span>`);
+    pages.push(
+      `<a href="${basePath}?page=${totalPages}" class="btn btn-secondary" style="padding: 0.25rem 0.5rem;">${totalPages}</a>`
+    );
+  }
+
+  // Next button
+  if (currentPage < totalPages) {
+    pages.push(
+      `<a href="${basePath}?page=${currentPage + 1}" class="btn btn-secondary" style="padding: 0.25rem 0.5rem;">Next →</a>`
+    );
+  }
+
+  return `
+    <div style="display: flex; align-items: center; justify-content: center; gap: 0.5rem; margin-top: 1rem;">
+      ${pages.join("")}
+      <span class="text-muted text-sm" style="margin-left: 1rem;">
+        ${totalRecords.toLocaleString()} total
+      </span>
+    </div>
+  `;
+}
+
+export default new Elysia().get(
+  "/:username/workouts",
+  ({ params, query }) => {
+    const username = params.username;
+    const page = Math.max(1, parseInt(query.page || "1", 10));
+    const db = getDatabase();
+    const users = getAllUsers();
+    const user = users.find((u) => u.username === username);
+
+    if (!user) {
+      return Response.redirect("/");
+    }
+
+    // Get total count for pagination
+    const countResult = db
+      .query<{ count: number }>(
+        `SELECT COUNT(*) as count FROM workouts WHERE user_id = ?`
+      )
+      .get(user.id);
+    const totalRecords = countResult?.count || 0;
+    const totalPages = Math.ceil(totalRecords / PAGE_SIZE);
+    const offset = (page - 1) * PAGE_SIZE;
+
+    // Get workouts for current page
+    const workouts = db
+      .query<{
+        id: number;
+        activity_type: string;
+        start_date: string;
+        duration_minutes: number;
+        total_distance_km: number;
+        total_energy_kcal: number;
+        source_name: string;
+        has_route: number;
+      }>(
+        `SELECT id, activity_type, start_date, duration_minutes,
+                total_distance_km, total_energy_kcal, source_name, has_route
+         FROM workouts
+         WHERE user_id = ?
+         ORDER BY start_date DESC
+         LIMIT ? OFFSET ?`
+      )
+      .all(user.id, PAGE_SIZE, offset);
 
   // Get workout stats
   const stats = db
@@ -103,7 +186,7 @@ export default new Elysia().get("/:username/workouts", ({ params }) => {
 
     <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 1.5rem;">
       <div class="card">
-        <h2>Recent Workouts</h2>
+        <h2>Workouts</h2>
         ${
           workouts.length > 0
             ? `
@@ -151,6 +234,7 @@ export default new Elysia().get("/:username/workouts", ({ params }) => {
                 .join("")}
             </tbody>
           </table>
+          ${paginationControls(`/${username}/workouts`, page, totalPages, totalRecords)}
         `
             : '<p class="text-muted text-center mt-2">No workouts found</p>'
         }
