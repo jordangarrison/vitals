@@ -1,5 +1,7 @@
 # Vitals
 
+[![CI](https://github.com/jordangarrison/vitals/actions/workflows/ci.yml/badge.svg)](https://github.com/jordangarrison/vitals/actions/workflows/ci.yml)
+
 Personal health data explorer for Apple Health and MacroFactor data. Built with Bun, Elysia, htmx, and SQLite.
 
 ## Features
