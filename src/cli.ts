@@ -18,7 +18,7 @@ async function main() {
 
 async function runImport() {
   // Parse command line arguments
-  let username = "jordan"; // Default username
+  let username = ""; // No default - must be specified
   let skipAppleHealth = false;
   let skipMacroFactor = false;
   let skipClinicalRecords = false;
@@ -99,7 +99,7 @@ Usage:
   bun run import [options]
 
 Options:
-  --user, -u <username>        Username to import data for (default: jordan)
+  --user, -u <username>        Username to import data for (required)
   --skip-apple-health          Skip Apple Health import
   --skip-macrofactor           Skip MacroFactor import
   --skip-clinical-records      Skip FHIR clinical records import
@@ -108,17 +108,17 @@ Options:
   --help, -h                   Show this help message
 
 Examples:
-  # Import all data for user 'jordan'
-  bun run import --user jordan
+  # Import all data for a user
+  bun run import --user myuser
 
   # Import only Apple Health data
-  bun run import --user jordan --skip-macrofactor
+  bun run import --user myuser --skip-macrofactor
 
   # Import only MacroFactor data
-  bun run import --user jordan --skip-apple-health
+  bun run import --user myuser --skip-apple-health
 
   # Import only Phase 4 data (clinical, ECG, routes)
-  bun run import --user jordan --skip-apple-health --skip-macrofactor
+  bun run import --user myuser --skip-apple-health --skip-macrofactor
 
 Data Structure:
   health-data/

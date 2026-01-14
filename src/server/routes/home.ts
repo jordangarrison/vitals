@@ -17,7 +17,7 @@ export default new Elysia()
           <p class="text-muted mt-2">
             No data imported yet. Run the import command to get started:
           </p>
-          <pre class="mt-2">bun run import --user jordan</pre>
+          <pre class="mt-2">bun run import --user &lt;username&gt;</pre>
         </div>
       `
       );

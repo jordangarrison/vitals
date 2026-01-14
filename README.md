@@ -54,17 +54,17 @@ health-data/
 ### Import Your Data
 
 ```bash
-# Import all data for user 'jordan'
-bun run import --user jordan
+# Import all data for a user
+bun run import --user myuser
 
 # Import only Apple Health data
-bun run import --user jordan --skip-macrofactor
+bun run import --user myuser --skip-macrofactor
 
 # Import only MacroFactor data
-bun run import --user jordan --skip-apple-health
+bun run import --user myuser --skip-apple-health
 
 # Skip specific data types
-bun run import --user jordan --skip-ecg --skip-workout-routes
+bun run import --user myuser --skip-ecg --skip-workout-routes
 ```
 
 ### Start the Server
@@ -115,7 +115,7 @@ Open http://localhost:3000 in your browser.
 bun run import [options]
 
 Options:
-  --user, -u <username>    Username to import data for (default: jordan)
+  --user, -u <username>    Username to import data for (required)
   --skip-apple-health      Skip Apple Health XML import
   --skip-macrofactor       Skip MacroFactor Excel import
   --skip-clinical-records  Skip FHIR clinical records import
