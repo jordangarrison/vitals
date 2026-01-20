@@ -25,12 +25,12 @@ export async function importClinicalRecords(
   logger.info(`\nImporting Clinical Records...`);
 
   if (!existsSync(clinicalRecordsPath)) {
-    logger.warn(`Clinical records directory not found: ${clinicalRecordsPath}`);
+    logger.info(`No clinical records found (optional)`);
     return {
       success: true,
       recordsImported: 0,
       errors: [],
-      warnings: [`Clinical records directory not found`],
+      warnings: [],
       timeTaken: 0,
     };
   }

@@ -68,7 +68,7 @@ export async function parseAppleHealthXML(
     `);
 
     const insertActivity = db.prepare(`
-      INSERT INTO activity_summaries (
+      INSERT OR REPLACE INTO activity_summaries (
         user_id, date, active_energy_burned, active_energy_goal,
         move_time_minutes, move_time_goal, exercise_time_minutes,
         exercise_time_goal, stand_hours, stand_hours_goal
